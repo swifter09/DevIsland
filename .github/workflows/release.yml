@@ -1,0 +1,32 @@
+# 打 tag(如 v0.1.0)即自动构建 .app + DMG,并发布到 GitHub Release。
+# 产物为 ad-hoc 签名、未公证 —— 用户首次打开需右键「打开」绕过 Gatekeeper(见 README)。
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # 创建 Release 需要
+
+jobs:
+  release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Build .app + DMG
+        run: |
+          bash scripts/build_app.sh
+          bash scripts/package_dmg.sh
+
+      - name: Publish DMG to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.dmg \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
