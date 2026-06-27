@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Swift / SwiftPM
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+.swiftpm/
+Package.resolved
+
+# 构建产物 / 分发包
+dist/
+*.dmg
+*.app/
+
+# 密钥 / 本地环境
+.env
+
+# 本地 Claude Code 配置(含个人 allowlist 与机器路径,不公开)
+.claude/
+
+# 内部规划文档 —— 不随仓库发布
+ROADMAP.md
+.board/
+
+# 临时文件
+scratchpad/
