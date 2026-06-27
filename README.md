@@ -6,6 +6,7 @@
 
 把本机 AI 编程会话的"选择时刻"(权限批准、AskUserQuestion 提问)聚合到 macOS 顶部的"动态岛",**就地点选作答**。
 
+![CI](https://github.com/swifter09/DevIsland/actions/workflows/ci.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey.svg)
 
@@ -15,6 +16,14 @@
 </div>
 
 ## What it does / 是什么
+
+**The problem:** every time Claude Code asks for permission or pops an `AskUserQuestion`, you have to dig back to *that* terminal tab to answer it — and it only gets messier once several sessions are running at once.
+
+DevIsland is a pure-Swift macOS menu-bar app that watches your local AI coding sessions (Claude Code, Codex) and surfaces their **decision moments** — permission approvals and `AskUserQuestion` prompts — onto a Dynamic-Island-style overlay at the top of your screen. **Answer right there, on the island, without switching tabs.** All local file IPC: no network, no account.
+
+---
+
+**痛点:** 每次 Claude 要权限、或抛出一个 `AskUserQuestion`,你都得翻回*那个*终端标签去找它——会话一多就更乱。
 
 DevIsland 是一个纯 Swift 的 macOS 菜单栏应用,在屏幕顶部显示一个"动态岛"悬浮面板,监控本机正在运行的 AI 编程工具会话(Claude Code、Codex)。当某个会话需要你**做选择**时——批准一次权限、或回答一个 `AskUserQuestion`——请求会浮现到岛上,你**直接点选**即可,不必切回那个终端标签。全程本地文件 IPC,不联网、无账号。
 
