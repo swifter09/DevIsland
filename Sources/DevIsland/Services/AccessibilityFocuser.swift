@@ -8,9 +8,12 @@ import ApplicationServices
 /// AX 不暴露，无法再细分）。需要用户授予辅助功能权限。
 @MainActor
 enum AccessibilityFocuser {
-    /// 是否已获辅助功能授权；needsPrompt 为真时会弹系统授权框
+    /// 是否已获辅助功能授权；needsPrompt 为真时会弹系统授权框。
+    /// nonisolated：底层 AXIsProcessTrustedWithOptions 线程安全、无需主线程隔离，
+    /// 这样才能在 SwiftUI 的 @State 默认值（nonisolated 上下文）里直接调用——
+    /// 否则新版 Swift 工具链会报 "main actor-isolated ... in a synchronous nonisolated context"。
     @discardableResult
-    static func isTrusted(promptIfNeeded: Bool) -> Bool {
+    nonisolated static func isTrusted(promptIfNeeded: Bool) -> Bool {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         return AXIsProcessTrustedWithOptions([key: promptIfNeeded] as CFDictionary)
     }
