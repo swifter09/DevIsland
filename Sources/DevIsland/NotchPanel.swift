@@ -32,6 +32,12 @@ private final class PassthroughHostingView<Content: View>: NSHostingView<Content
         guard IslandHitState.shared.islandRect.contains(topLeft) else { return nil }
         return super.hitTest(point)
     }
+
+    // 面板是 .nonactivatingPanel：不是 key window 时，第一次点击默认只用来把窗口变 key、
+    // 不会投递给控件，造成「允许/拒绝、选项第一下不灵、第二下才点到」。返回 true 让那记
+    // 激活点击同时传给下方 SwiftUI 控件，一次点击即生效。岛外点击已被 hitTest 挡成 nil，
+    // 故无条件返回 true 不影响透明区穿透。
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 /// 贴在屏幕顶部的固定透明画布。窗口本身不缩放——岛在画布内自己做展开/收起动画，
