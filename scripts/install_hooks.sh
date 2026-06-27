@@ -12,6 +12,20 @@ mkdir -p "$BASE/hooks" "$BASE/requests"
 cp "$ROOT/hooks/devisland-gate.py" "$HOOK_CMD"
 chmod +x "$HOOK_CMD"
 
+# 看板生成技能:拷到 Claude 与 Codex 的用户技能目录,让两边都能「更新看板」。
+# DevIsland 只渲染 <项目>/.board/board.html(自包含 HTML),生成由这个技能负责;
+# 两家技能格式通用,都是 ~/.<tool>/skills/<name>/SKILL.md。
+SKILL_SRC="$ROOT/skills/update-board"
+if [ -d "$SKILL_SRC" ]; then
+    for tool_home in "$HOME/.claude" "$HOME"/.claude-* "$HOME/.codex"; do
+        [ -d "$tool_home" ] || continue
+        dest="$tool_home/skills/update-board"
+        mkdir -p "$dest"
+        cp "$SKILL_SRC/SKILL.md" "$dest/SKILL.md"
+        echo "已装看板技能: $dest/SKILL.md"
+    done
+fi
+
 # 装进所有 Claude Code 配置目录（支持 CLAUDE_CONFIG_DIR 多 profile 用法，
 # 如 ~/.claude-work / ~/.claude-personal）
 for dir in "$HOME/.claude" "$HOME"/.claude-*; do
