@@ -9,8 +9,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey.svg)
 
-<!-- ⬇ 涨 star 的头号资产:15 秒核心价值演示 GIF。录一段「岛上点选回答 AskUserQuestion」放这里。 -->
-![demo](docs/demo.gif)
+<!-- 头条视觉:岛上核心交互的清晰截图,保存为 docs/screenshot.png。 -->
+![DevIsland — 在动态岛上就地回答 AI 编程会话的提问](docs/screenshot.png)
 
 </div>
 
