@@ -10,8 +10,8 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey.svg)
 
-<!-- 头条视觉:岛上核心交互的清晰截图,保存为 docs/screenshot.png。 -->
-![DevIsland — 在动态岛上就地回答 AI 编程会话的提问](docs/screenshot.png)
+<!-- 头条视觉:动态岛就地作答的演示动画。 -->
+![DevIsland — answer your AI agents from a Dynamic-Island overlay](docs/demo.gif)
 
 </div>
 
