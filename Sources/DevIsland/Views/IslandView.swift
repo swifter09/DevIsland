@@ -1,6 +1,25 @@
 import SwiftUI
 import AppKit
 
+// MARK: - 展开"长出"过渡
+
+/// 从状态栏锚点向下纵向"长出"：y 从矮到满 + 轻微横向放大 + 淡入。
+/// 配合外层轻阻尼 spring，呈现"从刘海里生长出来"的生长感。
+private struct GrowOutModifier: ViewModifier {
+    var p: Double   // 0 = 收起态, 1 = 展开态
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(x: 0.82 + 0.18 * p, y: 0.12 + 0.88 * p, anchor: .top)
+            .opacity(p)
+    }
+}
+
+extension AnyTransition {
+    static var growOut: AnyTransition {
+        .modifier(active: GrowOutModifier(p: 0), identity: GrowOutModifier(p: 1))
+    }
+}
+
 /// 屏幕顶部的"动态岛"主视图
 struct IslandView: View {
     /// 真实菜单栏高度（刘海屏更高，自动适配）
@@ -26,11 +45,11 @@ struct IslandView: View {
     /// 审批响应后的「保持展开」截止时刻，避免响应瞬间面板收起闪烁
     @State private var holdExpandedUntil: Date = .distantPast
 
-    /// 动态岛形状：顶边齐平、上角向外凹肩、下角外圆（像真刘海）
+    /// 动态岛形状：顶边与状态栏齐平、上角向外凹肩（模仿刘海屏圆弧）、下角外圆
     private var islandShape: NotchShape { NotchShape(shoulder: 11, bottom: 20) }
 
     var body: some View {
-        // 固定画布：岛顶部居中，其余透明区域点击穿透
+        // 固定画布：岛贴屏幕顶部居中，其余透明区域点击穿透
         VStack(spacing: 0) {
             island
             Spacer(minLength: 0)
@@ -43,12 +62,15 @@ struct IslandView: View {
         // compactView 常驻；expandedView 出现时从顶部、由小放大盖住它，消失时反向收回
         ZStack(alignment: .top) {
             compactCapsule
+                .opacity(isExpanded ? 0 : 1)   // 展开时小胶囊淡出，避免在大面板下露出造成割裂
             if isExpanded {
                 expandedPanel
-                    .transition(.scale(scale: 0.28, anchor: .top).combined(with: .opacity))
+                    // 从状态栏锚点向下"长出"：纵向 y 从矮到满 + 轻微横向放大 + 淡入
+                    .transition(.growOut)
             }
         }
-        .animation(.easeInOut(duration: animDuration), value: isExpanded)
+        // 轻阻尼 spring 带一点回弹，强化"从刘海长出来"的生长感
+        .animation(.spring(response: max(0.32, animDuration + 0.06), dampingFraction: 0.78), value: isExpanded)
         // 报告岛矩形供 hitTest 点击穿透
         .background(
             GeometryReader { geo in
@@ -527,8 +549,8 @@ struct ApprovalRowView: View {
     @ObservedObject private var loc = L10n.shared
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // 非内联（顶部孤儿卡片）才显示完整标题；内联时项目名已在会话行上
+        VStack(alignment: .leading, spacing: 8) {
+            // 非内联（顶部孤儿卡片）才显示完整标题 + 意图；内联时项目名已在会话行上
             if !inline {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.shield.fill")
@@ -539,73 +561,81 @@ struct ApprovalRowView: View {
                         .foregroundStyle(.white)
                     Spacer(minLength: 12)
                 }
-            }
-
-            if let intent = request.intent, !intent.isEmpty {
-                Text(intent)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-
-            if !request.detail.isEmpty {
-                // 命令块：橙色背景 + 工具名标签（如 bash）
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(request.toolName.lowercased())
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Capsule().fill(.orange.opacity(0.22)))
-                    Text(request.detail)
-                        .font(.system(size: 10, design: .monospaced))
+                if let intent = request.intent, !intent.isEmpty {
+                    Text(intent)
+                        .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(4)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(.orange.opacity(0.12))
-                )
             }
 
-            // 允许 / 拒绝：左右排列
-            HStack(spacing: 8) {
-                optionButton(icon: "checkmark.circle.fill", color: .green,
+            // 命令行：$ <命令>            <工具 · 项目>（右对齐）
+            if !request.detail.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if isShellCommand {
+                        Text("$")
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.orange)
+                    }
+                    Text(request.detail)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 12)
+                    Text("\(request.toolName) · \(request.projectName)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .layoutPriority(-1)
+                }
+            }
+
+            // 允许 / 拒绝：左右两个大按钮
+            HStack(spacing: 10) {
+                actionButton(icon: "checkmark", color: .green,
                              text: loc.t("common.allow"), shortcut: "⌘Y", decision: .allow)
-                optionButton(icon: "xmark.circle.fill", color: .red,
+                actionButton(icon: "xmark", color: .red,
                              text: loc.t("common.deny"), shortcut: "⌘N", decision: .deny)
             }
         }
         .frame(maxWidth: .infinity)
     }
 
+    /// 是否是 shell 命令（决定命令行是否加 `$` 前缀）
+    private var isShellCommand: Bool {
+        let n = request.toolName.lowercased()
+        return n.contains("bash") || n.contains("shell") || n.contains("zsh")
+    }
+
     /// 用 onTapGesture 而不是 Button：面板不抢键盘焦点（canBecomeKey = false），
     /// 普通 Button 在非 key window 里可能不响应
-    private func optionButton(icon: String, color: Color, text: String,
+    private func actionButton(icon: String, color: Color, text: String,
                               shortcut: String, decision: ApprovalService.Decision) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 11))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(color)
             Text(text)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.white.opacity(0.9))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
                 .lineLimit(1)
             Spacer(minLength: 4)
             Text(shortcut)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(.white.opacity(0.5))
-                .padding(.horizontal, 5).padding(.vertical, 1)
-                .background(RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.1)))
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(.white.opacity(0.1)))
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(color.opacity(0.12))
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(color.opacity(0.16))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(color.opacity(0.35), lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onTapGesture { respond(decision) }
@@ -623,36 +653,41 @@ struct SessionRowView: View {
     var body: some View {
         // 活跃行多行内容用顶对齐；不活跃单行用居中，图标与标题对齐
         HStack(alignment: isActive ? .top : .center, spacing: iconGap) {
-            // 左侧图标：运行中是像素小人，否则静态点
+            // 左侧图标：圆角方形徽章。运行中是像素小人（绿底），否则工具符号（工具主色底）
             Group {
                 if session.status == .running {
                     PixelRunnerView(color: .green, pixelSize: 2)
                 } else {
                     Image(systemName: session.tool.symbolName)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.black.opacity(0.8))
                 }
             }
             .frame(width: iconSize, height: iconSize)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(session.status == .running
+                          ? Color.green.opacity(0.18)
+                          : toolAccent.opacity(0.9))
+            )
             .padding(.top, isActive ? 1 : 0)
 
             VStack(alignment: .leading, spacing: 3) {
                 // 第一行：文件夹 · 标题   +   工具标签 / 主机标签 / 时间 / 状态点
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(titleText)
+                    titleLabel
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     // 固定列宽，保证各行标签纵向对齐（左对齐成列）
-                    tag(session.tool.shortName, bg: .blue.opacity(0.35), fg: .blue)
-                        .frame(width: 52, alignment: .leading)
+                    tag(session.tool.shortName, fg: toolAccent)
+                        .frame(width: 56, alignment: .leading)
                     Group {
                         if let host = session.hostName {
-                            tag(host, bg: .white.opacity(0.12), fg: .secondary)
+                            tag(host, fg: .white.opacity(0.7))
                         }
                     }
-                    .frame(width: 62, alignment: .leading)
+                    .frame(width: 66, alignment: .leading)
                     Text(relativeTime)
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
@@ -712,9 +747,23 @@ struct SessionRowView: View {
         session.status == .asking || Date().timeIntervalSince(session.lastActivity) < 1800
     }
 
-    private var titleText: String {
-        if let t = session.title { return "\(session.projectName) · \(t)" }
-        return session.projectName
+    /// 标题双色：项目名白色加粗 + 「· 标题」灰色常规
+    private var titleLabel: Text {
+        let project = Text(session.projectName).foregroundColor(.white)
+        guard let t = session.title else { return project }
+        return project
+            + Text("  ·  ").foregroundColor(.white.opacity(0.4))
+            + Text(t).foregroundColor(.white.opacity(0.55)).fontWeight(.regular)
+    }
+
+    /// 工具主色：会话徽章底色 / 工具标签字色
+    private var toolAccent: Color {
+        switch session.tool {
+        case .claudeCode: return .teal
+        case .codex:      return .green
+        case .geminiCLI:  return .blue
+        case .cursor:     return .white
+        }
     }
 
     /// 相对时间，如 <1m / 5m / 2h
@@ -725,12 +774,20 @@ struct SessionRowView: View {
         return "\(s / 3600)h"
     }
 
-    private func tag(_ text: String, bg: Color, fg: Color) -> some View {
+    /// 统一标签样式：暗色半透明底 + 细描边，字色区分（工具=主色，主机=灰）
+    private func tag(_ text: String, fg: Color) -> some View {
         Text(text)
             .font(.system(size: 10, weight: .medium))
-            .padding(.horizontal, 7)
+            .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Capsule().fill(bg))
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(.white.opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(.white.opacity(0.12), lineWidth: 1)
+            )
             .foregroundStyle(fg)
             .fixedSize()
     }
