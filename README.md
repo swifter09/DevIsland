@@ -29,8 +29,6 @@ DevIsland 是一个纯 Swift 的 macOS 应用,常驻在屏幕顶部的"动态岛
 
 平时收起成屏幕顶部的小胶囊,一眼看到活跃会话数与状态;点击展开成完整列表(即上方头图)。
 
-![DevIsland 收起态:顶部小胶囊显示活跃会话数](docs/screenshot-collapsed.png)
-
 ## Features / 功能
 
 只列**实测可用**的(✅);部分可用与未实现的分开标注,绝不混淆。
