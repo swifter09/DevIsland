@@ -40,11 +40,11 @@ enum ClaudeMode {
     case apiKey         // API Key 计费——没有窗口配额概念
     case unknown
 
-    var text: String {
+    var textKey: String {
         switch self {
-        case .subscription: return "订阅"
-        case .apiKey: return "apikey"
-        case .unknown: return "—"
+        case .subscription: return "quota.mode.subscription"
+        case .apiKey: return "quota.mode.apikey"
+        case .unknown: return "quota.mode.unknown"
         }
     }
 }

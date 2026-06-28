@@ -6,6 +6,7 @@ import AppKit
 struct IslandActionsView: View {
     @EnvironmentObject var managed: ManagedSessionStore
     @StateObject private var groups = ProjectGroupStore.shared
+    @ObservedObject private var loc = L10n.shared
 
     @State private var taskPrompt = ""
     @AppStorage("lastTaskDir") private var taskDir = ""
@@ -17,21 +18,21 @@ struct IslandActionsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // 新建会话：开一个真终端跑 claude "<首句>"，之后照常被监控
-            Text("新建会话")
+            Text(loc.t("actions.newSession"))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            TextField("开场白，例如：模拟一场前端面试…", text: $taskPrompt, axis: .vertical)
+            TextField(loc.t("actions.taskPlaceholder"), text: $taskPrompt, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 12))
                 .lineLimit(1...3)
 
             HStack(spacing: 8) {
-                Text(taskDir.isEmpty ? "未选目录" : URL(fileURLWithPath: taskDir).lastPathComponent)
+                Text(taskDir.isEmpty ? loc.t("actions.noDir") : URL(fileURLWithPath: taskDir).lastPathComponent)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                Button("选目录") { pickDirectory() }
+                Button(loc.t("actions.chooseDir")) { pickDirectory() }
                     .controlSize(.small)
                 Spacer()
                 Picker("", selection: $launchTargetRaw) {
@@ -42,7 +43,7 @@ struct IslandActionsView: View {
                 .labelsHidden()
                 .controlSize(.small)
                 .frame(width: 90)
-                Button("开终端") {
+                Button(loc.t("actions.openTerminal")) {
                     let target = TerminalLauncher.Target(rawValue: launchTargetRaw) ?? .ghostty
                     TerminalLauncher.launch(target: target, cwd: taskDir, prompt: taskPrompt)
                     taskPrompt = ""
@@ -56,28 +57,28 @@ struct IslandActionsView: View {
 
             // 项目组：一条指令并行分发给组里每个目录（headless）
             HStack {
-                Text("项目组（批量任务）")
+                Text(loc.t("actions.projectGroup"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("新建组") { createGroupFlow() }
+                Button(loc.t("actions.newGroup")) { createGroupFlow() }
                     .controlSize(.small)
             }
 
             if groups.groups.isEmpty {
-                Text("还没有项目组——点「新建组」选多个仓库目录")
+                Text(loc.t("actions.noGroups"))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             } else {
                 Picker("", selection: $selectedGroupID) {
                     ForEach(groups.groups) { g in
-                        Text("\(g.name)（\(g.dirs.count) 个目录）").tag(g.id)
+                        Text(loc.t("actions.groupItem", g.name, g.dirs.count)).tag(g.id)
                     }
                 }
                 .labelsHidden()
                 .controlSize(.small)
 
-                TextField("给全组的指令，例如：把接口超时改成 30s…", text: $groupPrompt, axis: .vertical)
+                TextField(loc.t("actions.groupPlaceholder"), text: $groupPrompt, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12))
                     .lineLimit(1...3)
@@ -90,7 +91,7 @@ struct IslandActionsView: View {
                         .controlSize(.small)
                     }
                     Spacer()
-                    Button("并行分发") {
+                    Button(loc.t("actions.distribute")) {
                         if let g = currentGroup {
                             managed.launchGroup(g, prompt: groupPrompt)
                             groupPrompt = ""
@@ -113,7 +114,7 @@ struct IslandActionsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.message = "选择任务运行的项目目录"
+        panel.message = loc.t("actions.pickDirMsg")
         NSApp.activate(ignoringOtherApps: true)
         if panel.runModal() == .OK, let url = panel.url {
             taskDir = url.path
@@ -126,24 +127,24 @@ struct IslandActionsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.message = "选择项目组包含的多个仓库目录（可多选）"
+        panel.message = loc.t("actions.pickGroupMsg")
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, !panel.urls.isEmpty else { return }
         let dirs = panel.urls.map(\.path)
 
         let alert = NSAlert()
-        alert.messageText = "给项目组起个名字"
-        alert.informativeText = "包含 \(dirs.count) 个目录"
+        alert.messageText = loc.t("actions.nameGroup")
+        alert.informativeText = loc.t("actions.nameGroup.info", dirs.count)
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 220, height: 24))
         field.stringValue = dirs.count == 1
             ? URL(fileURLWithPath: dirs[0]).lastPathComponent
-            : URL(fileURLWithPath: dirs[0]).deletingLastPathComponent().lastPathComponent + " 组"
+            : URL(fileURLWithPath: dirs[0]).deletingLastPathComponent().lastPathComponent + loc.t("actions.groupSuffix")
         alert.accessoryView = field
-        alert.addButton(withTitle: "创建")
-        alert.addButton(withTitle: "取消")
+        alert.addButton(withTitle: loc.t("common.create"))
+        alert.addButton(withTitle: loc.t("common.cancel"))
         if alert.runModal() == .alertFirstButtonReturn {
             let name = field.stringValue.trimmingCharacters(in: .whitespaces)
-            groups.add(name: name.isEmpty ? "未命名组" : name, dirs: dirs)
+            groups.add(name: name.isEmpty ? loc.t("actions.unnamedGroup") : name, dirs: dirs)
         }
     }
 }

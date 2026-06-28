@@ -59,11 +59,26 @@ final class L10n: ObservableObject {
         "island.active":       e("· %d active", "· %d 活跃"),
         "island.idle":         e("Idle", "空闲"),
         "island.noSessions":   e("No AI sessions running", "没有正在运行的 AI 会话"),
+        "island.collapseInactive": e("Collapse inactive sessions", "收起不活动会话"),
+        "island.expandInactive":   e("Expand %d inactive sessions", "展开 %d 个不活动会话"),
+
+        // —— 受管任务状态 ——
+        "mstate.launching":    e("Launching", "启动中"),
+        "mstate.running":      e("Running", "运行中"),
+        "mstate.succeeded":    e("Done", "完成"),
+        "mstate.failed":       e("Failed", "失败"),
 
         // —— 配额栏 ——
         "quota.none":          e("No quota (apikey / no data)", "无配额(apikey/无数据)"),
         "quota.today":         e("Today %@", "今日 %@"),
         "quota.hidden":        e("Limits hidden ↗", "限额不可见 ↗"),
+        "quota.mode.subscription": e("Subscription", "订阅"),
+        "quota.mode.apikey":   e("API Key", "API Key"),
+        "quota.mode.unknown":  e("—", "—"),
+        "quota.age.now":       e("just now", "刚刚"),
+        "quota.age.m":         e("%dm ago", "%dm前"),
+        "quota.age.h":         e("%dh ago", "%dh前"),
+        "quota.age.d":         e("%dd ago", "%dd前"),
         "quota.help":          e("Subscription mode: click to open the claude.ai usage page for official 5h/7d quota (not readable locally); today's tokens are a local tally, for reference only.",
                                   "订阅模式:点击打开 claude.ai 用量页看官方 5h/7d 配额(本地不可读);今日 token 为本地累计,仅参考"),
 
@@ -80,6 +95,8 @@ final class L10n: ObservableObject {
         "session.jumpTerminal": e("Jump to terminal", "跳转到终端"),
         "session.activate":    e("Activate %@", "唤起 %@"),
         "managed.title":       e("Managed tasks", "受管任务"),
+        "group.progress":      e("%d/%d done", "%d/%d 完成"),
+        "group.failed":        e(" · %d failed", " · %d 失败"),
         "managed.cancel":      e("Cancel task", "取消任务"),
 
         // —— 会话状态 ——
@@ -131,13 +148,37 @@ final class L10n: ObservableObject {
         "settings.quit.button":           e("Quit", "退出"),
 
         // —— 新建会话 / 项目组 ——
+        "common.create":         e("Create", "创建"),
+        "common.cancel":         e("Cancel", "取消"),
         "actions.newSession":    e("New session", "新建会话"),
+        "actions.taskPlaceholder": e("Opening line, e.g. Simulate a frontend interview…", "开场白,例如:模拟一场前端面试…"),
         "actions.noDir":         e("No directory", "未选目录"),
+        "actions.chooseDir":     e("Choose dir", "选目录"),
+        "actions.openTerminal":  e("Open terminal", "开终端"),
         "actions.projectGroup":  e("Project group (batch tasks)", "项目组(批量任务)"),
+        "actions.newGroup":      e("New group", "新建组"),
         "actions.noGroups":      e("No project groups yet — tap \"New group\" to pick repo dirs", "还没有项目组——点「新建组」选多个仓库目录"),
+        "actions.groupItem":     e("%@ (%d dirs)", "%@(%d 个目录)"),
+        "actions.groupPlaceholder": e("Instruction for the whole group, e.g. change API timeout to 30s…", "给全组的指令,例如:把接口超时改成 30s…"),
+        "actions.distribute":    e("Distribute", "并行分发"),
+        "actions.pickDirMsg":    e("Choose the project directory to run the task in", "选择任务运行的项目目录"),
+        "actions.pickGroupMsg":  e("Choose the repo directories in this group (multiple allowed)", "选择项目组包含的多个仓库目录(可多选)"),
+        "actions.nameGroup":     e("Name the project group", "给项目组起个名字"),
+        "actions.nameGroup.info": e("%d directories", "包含 %d 个目录"),
+        "actions.groupSuffix":   e(" group", " 组"),
+        "actions.unnamedGroup":  e("Untitled group", "未命名组"),
 
         // —— 历史 ——
         "history.rescan":        e("Rescan", "重新扫描"),
+        "history.windowTitle":   e("History", "历史对话"),
+        "history.searchPrompt":  e("Search project / title / content", "搜索项目 / 标题 / 内容"),
+        "history.empty":         e("No history found\n(transcripts under ~/.claude/projects)", "没有找到历史会话\n(~/.claude/projects 下的转录文件)"),
+        "history.selectPrompt":  e("Select a conversation on the left", "从左侧选择一段对话"),
+        "history.msgCount":      e("%d messages", "%d 条消息"),
+        "history.fmt.today":     e("'Today' HH:mm", "'今天' HH:mm"),
+        "history.fmt.yesterday": e("'Yesterday' HH:mm", "'昨天' HH:mm"),
+        "history.fmt.thisYear":  e("MMM d, HH:mm", "M月d日 HH:mm"),
+        "history.fmt.older":     e("yyyy/M/d", "yyyy/M/d"),
         "history.noTitle":       e("(Untitled session)", "(无标题会话)"),
         "history.noText":        e("No displayable text messages in this transcript", "这段转录里没有可显示的文本消息"),
         "history.resume":        e("Resume in terminal", "在终端恢复"),

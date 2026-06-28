@@ -7,6 +7,7 @@ struct HistoryView: View {
     @StateObject private var store = HistoryStore.shared
     @State private var query = ""
     @State private var selectedID: String?
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         NavigationSplitView {
@@ -22,7 +23,7 @@ struct HistoryView: View {
                 }
                 .listStyle(.sidebar)
             }
-            .searchable(text: $query, placement: .sidebar, prompt: "搜索项目 / 标题 / 内容")
+            .searchable(text: $query, placement: .sidebar, prompt: loc.t("history.searchPrompt"))
             .navigationSplitViewColumnWidth(min: 240, ideal: 280, max: 360)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -31,7 +32,7 @@ struct HistoryView: View {
                     } label: {
                         Image(systemName: "arrow.clockwise")
                     }
-                    .help("重新扫描")
+                    .help(loc.t("history.rescan"))
                     .disabled(store.isLoading)
                 }
             }
@@ -60,8 +61,8 @@ struct HistoryView: View {
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 40)).foregroundStyle(.secondary)
             Text(store.conversations.isEmpty
-                 ? "没有找到历史会话\n（~/.claude/projects 下的转录文件）"
-                 : "从左侧选择一段对话")
+                 ? loc.t("history.empty")
+                 : loc.t("history.selectPrompt"))
                 .font(.system(size: 13)).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -100,14 +101,15 @@ struct HistoryView: View {
 
 private struct HistoryRow: View {
     let conversation: HistoryConversation
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(conversation.title ?? conversation.lastUserPrompt ?? "（无标题会话）")
+            Text(conversation.title ?? conversation.lastUserPrompt ?? loc.t("history.noTitle"))
                 .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
             HStack(spacing: 6) {
-                Text(Self.dateLabel(conversation.lastActivity))
+                Text(dateLabel(conversation.lastActivity))
                 Text("·")
                 Text(Self.sizeLabel(conversation.sizeBytes))
             }
@@ -117,13 +119,13 @@ private struct HistoryRow: View {
         .padding(.vertical, 2)
     }
 
-    static func dateLabel(_ date: Date) -> String {
+    private func dateLabel(_ date: Date) -> String {
         let cal = Calendar.current
         let f = DateFormatter()
-        if cal.isDateInToday(date) { f.dateFormat = "今天 HH:mm" }
-        else if cal.isDateInYesterday(date) { f.dateFormat = "昨天 HH:mm" }
-        else if cal.isDate(date, equalTo: Date(), toGranularity: .year) { f.dateFormat = "M月d日 HH:mm" }
-        else { f.dateFormat = "yyyy/M/d" }
+        if cal.isDateInToday(date) { f.dateFormat = loc.t("history.fmt.today") }
+        else if cal.isDateInYesterday(date) { f.dateFormat = loc.t("history.fmt.yesterday") }
+        else if cal.isDate(date, equalTo: Date(), toGranularity: .year) { f.dateFormat = loc.t("history.fmt.thisYear") }
+        else { f.dateFormat = loc.t("history.fmt.older") }
         return f.string(from: date)
     }
 
@@ -141,6 +143,7 @@ struct HistoryDetailView: View {
     @State private var messages: [TranscriptMessage] = []
     @State private var loading = true
     @AppStorage("launchTarget") private var launchTargetRaw = TerminalLauncher.Target.ghostty.rawValue
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -149,7 +152,7 @@ struct HistoryDetailView: View {
             if loading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if messages.isEmpty {
-                Text("这段转录里没有可显示的文本消息")
+                Text(loc.t("history.noText"))
                     .font(.system(size: 12)).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -188,21 +191,21 @@ struct HistoryDetailView: View {
                                             cwd: conversation.cwd ?? "",
                                             sessionID: conversation.sessionID)
                 } label: {
-                    Label("在终端恢复", systemImage: "play.fill")
+                    Label(loc.t("history.resume"), systemImage: "play.fill")
                 }
                 .controlSize(.small)
                 .disabled(conversation.cwd == nil)
-                .help("cd 到原目录并执行 claude --resume")
+                .help(loc.t("history.resume.help"))
 
                 Button {
                     NSWorkspace.shared.activateFileViewerSelecting([conversation.url])
                 } label: {
-                    Label("在访达中显示", systemImage: "doc.text.magnifyingglass")
+                    Label(loc.t("history.revealFinder"), systemImage: "doc.text.magnifyingglass")
                 }
                 .controlSize(.small)
 
                 Spacer()
-                Text("\(messages.count) 条消息")
+                Text(loc.t("history.msgCount", messages.count))
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             .padding(.top, 2)
@@ -266,7 +269,7 @@ final class HistoryWindowController {
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered, defer: false
         )
-        w.title = "历史对话"
+        w.title = L10n.shared.t("history.windowTitle")
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: HistoryView())
         w.center()

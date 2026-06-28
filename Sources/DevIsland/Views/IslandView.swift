@@ -215,7 +215,7 @@ struct IslandView: View {
                 if let p = quota.codexPrimary {
                     quotaSegment(p)
                     if let s = quota.codexSecondary { quotaSegment(s) }
-                    Text(p.ageText)   // 快照新鲜度，配额只在 Codex 发起调用时写入，可能滞后
+                    Text(ageText(p.capturedAt))   // 快照新鲜度，配额只在 Codex 发起调用时写入，可能滞后
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary.opacity(0.7))
                 } else {
@@ -231,7 +231,7 @@ struct IslandView: View {
                 Text("Claude")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.orange.opacity(0.9))
-                Text(quota.claudeMode.text)
+                Text(loc.t(quota.claudeMode.textKey))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(quota.claudeMode == .subscription ? .green : .secondary)
                 if quota.claudeTodayTokens > 0 {
@@ -283,6 +283,15 @@ struct IslandView: View {
         if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
         if n >= 1_000 { return String(format: "%.0fk", Double(n) / 1_000) }
         return "\(n)"
+    }
+
+    /// 配额快照新鲜度,本地化("刚刚 / 8m前" vs "just now / 8m ago")
+    private func ageText(_ capturedAt: Date) -> String {
+        let s = max(0, Int(Date().timeIntervalSince(capturedAt)))
+        if s < 60 { return loc.t("quota.age.now") }
+        if s < 3600 { return loc.t("quota.age.m", s / 60) }
+        if s < 86400 { return loc.t("quota.age.h", s / 3600) }
+        return loc.t("quota.age.d", s / 86400)
     }
 
     private func quotaSegment(_ w: QuotaWindow) -> some View {
@@ -396,8 +405,8 @@ struct IslandView: View {
                 .font(.system(size: 10, weight: .bold))
                 .foregroundStyle(.white.opacity(0.7))
                 .rotationEffect(.degrees(showInactive ? 90 : 0))
-            Text(showInactive ? "收起不活动会话"
-                              : "展开 \(inactiveSessions.count) 个不活动会话")
+            Text(showInactive ? loc.t("island.collapseInactive")
+                              : loc.t("island.expandInactive", inactiveSessions.count))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.85))
             Spacer()
@@ -435,6 +444,7 @@ struct QuestionRowView: View {
     let request: PermissionRequest
     let onAnswer: ([String: [String]]) -> Void
     @State private var selections: [String: [String]] = [:]
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -444,7 +454,7 @@ struct QuestionRowView: View {
                 Text(request.projectName)
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
                 Spacer(minLength: 8)
-                Text(request.toolName == "AskUserQuestion" ? "提问" : request.toolName)
+                Text(request.toolName == "AskUserQuestion" ? loc.t("tool.askQuestion") : request.toolName)
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
 
@@ -461,7 +471,7 @@ struct QuestionRowView: View {
 
             // 多选/多问题：显示提交按钮；单问题单选则点选即提交
             if needsSubmit {
-                Text("提交")
+                Text(loc.t("common.submit"))
                     .font(.system(size: 11, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 5)
@@ -514,6 +524,7 @@ struct ApprovalRowView: View {
     /// 内联在会话条目下时为 true：省去重复的「工具 · 项目」大标题
     var inline: Bool = false
     let respond: (ApprovalService.Decision) -> Void
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -562,9 +573,9 @@ struct ApprovalRowView: View {
             // 允许 / 拒绝：左右排列
             HStack(spacing: 8) {
                 optionButton(icon: "checkmark.circle.fill", color: .green,
-                             text: "允许", shortcut: "⌘Y", decision: .allow)
+                             text: loc.t("common.allow"), shortcut: "⌘Y", decision: .allow)
                 optionButton(icon: "xmark.circle.fill", color: .red,
-                             text: "拒绝", shortcut: "⌘N", decision: .deny)
+                             text: loc.t("common.deny"), shortcut: "⌘N", decision: .deny)
             }
         }
         .frame(maxWidth: .infinity)
@@ -604,6 +615,7 @@ struct ApprovalRowView: View {
 /// 单个会话行
 struct SessionRowView: View {
     let session: AgentSession
+    @ObservedObject private var loc = L10n.shared
 
     private let iconSize: CGFloat = 22
     private let iconGap: CGFloat = 10
@@ -652,7 +664,7 @@ struct SessionRowView: View {
                             .foregroundStyle(.cyan)
                             .contentShape(Rectangle())
                             .onTapGesture { BoardWindowController.shared.show(session: session) }
-                            .help("打开项目看板")
+                            .help(loc.t("board.openHelp"))
                     }
                     Circle().fill(statusColor).frame(width: 7, height: 7)
                 }
@@ -778,7 +790,7 @@ struct SessionDetailView: View {
 
             // 最近对话
             if messages.isEmpty {
-                Text("（无法解析此会话的对话内容）")
+                Text(loc.t("session.unparseable"))
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             } else {
@@ -812,7 +824,7 @@ struct SessionDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: session.appBundleID == nil ? "terminal.fill" : "app.badge")
                     .font(.system(size: 10))
-                Text(session.appBundleID == nil ? "跳转到终端" : "唤起 \(session.tool.rawValue)")
+                Text(session.appBundleID == nil ? loc.t("session.jumpTerminal") : loc.t("session.activate", session.tool.rawValue))
                     .font(.system(size: 11, weight: .medium))
                 Spacer()
             }
@@ -842,6 +854,7 @@ struct GroupHeaderView: View {
     let name: String
     let sessions: [ManagedSession]
     let onClear: () -> Void
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         let done = sessions.filter { $0.state == .succeeded }.count
@@ -857,7 +870,7 @@ struct GroupHeaderView: View {
                 .foregroundStyle(.white)
             Spacer(minLength: 8)
             if running > 0 { PixelRunnerView(color: .purple, pixelSize: 2) }
-            Text("\(done)/\(sessions.count) 完成\(failed > 0 ? " · \(failed) 失败" : "")")
+            Text(loc.t("group.progress", done, sessions.count) + (failed > 0 ? loc.t("group.failed", failed) : ""))
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
             Image(systemName: "xmark.circle.fill")
@@ -872,6 +885,7 @@ struct GroupHeaderView: View {
 
 struct ManagedRowView: View {
     @ObservedObject var session: ManagedSession
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -891,7 +905,7 @@ struct ManagedRowView: View {
                 if session.state == .running || session.state == .launching {
                     PixelRunnerView(color: .purple, pixelSize: 2)
                 }
-                Text(session.state.label)
+                Text(loc.t(session.state.labelKey))
                     .font(.system(size: 10, weight: .medium))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -921,6 +935,7 @@ struct ManagedRowView: View {
 struct ManagedDetailView: View {
     @ObservedObject var session: ManagedSession
     let onBack: () -> Void
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -936,7 +951,7 @@ struct ManagedDetailView: View {
                 Text(session.projectName)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
-                Text("受管任务")
+                Text(loc.t("managed.title"))
                     .font(.system(size: 10))
                     .foregroundStyle(.purple)
 
@@ -945,7 +960,7 @@ struct ManagedDetailView: View {
                 if session.state == .running || session.state == .launching {
                     PixelRunnerView(color: .purple, pixelSize: 2)
                 }
-                Text(session.state.label)
+                Text(loc.t(session.state.labelKey))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -996,7 +1011,7 @@ struct ManagedDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "stop.fill")
                         .font(.system(size: 10))
-                    Text("取消任务")
+                    Text(loc.t("managed.cancel"))
                         .font(.system(size: 11, weight: .medium))
                     Spacer()
                 }

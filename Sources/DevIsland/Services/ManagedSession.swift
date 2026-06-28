@@ -12,12 +12,12 @@ final class ManagedSession: ObservableObject, Identifiable {
         case launching, running, succeeded
         case failed(String)
 
-        var label: String {
+        var labelKey: String {
             switch self {
-            case .launching: return "启动中"
-            case .running: return "运行中"
-            case .succeeded: return "完成"
-            case .failed: return "失败"
+            case .launching: return "mstate.launching"
+            case .running: return "mstate.running"
+            case .succeeded: return "mstate.succeeded"
+            case .failed: return "mstate.failed"
             }
         }
     }
