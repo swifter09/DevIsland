@@ -8,11 +8,12 @@ struct AgentSession: Identifiable, Equatable {
         case asking    // Claude 正通过 AskUserQuestion 等用户选择
         case replied   // 最后一条是 Claude 的回复，等用户下一条消息
 
-        var label: String {
+        /// 本地化 key,调用方用 L10n.shared.t(labelKey) 取当前语言文案
+        var labelKey: String {
             switch self {
-            case .running: return "运行中"
-            case .asking: return "在提问"
-            case .replied: return "已回复"
+            case .running: return "status.running"
+            case .asking: return "status.asking"
+            case .replied: return "status.replied"
             }
         }
     }

@@ -13,6 +13,7 @@ struct IslandView: View {
     @EnvironmentObject var approvals: ApprovalService
     @EnvironmentObject var managed: ManagedSessionStore
     @ObservedObject private var quota = QuotaReader.shared
+    @ObservedObject private var loc = L10n.shared
     @State private var isExpanded = false
     /// 岛展开/收起动画时长（秒），可在设置里调
     @AppStorage("islandAnimDuration") private var animDuration: Double = 0.28
@@ -135,17 +136,17 @@ struct IslandView: View {
     private var compactView: some View {
         HStack(spacing: 8) {
             if !approvals.pending.isEmpty {
-                Text("\(approvals.pending.count) 待批准")
+                Text(loc.t("island.pending", approvals.pending.count))
                     .foregroundStyle(.orange)
             } else if totalCount > 0 {
-                Text("\(totalCount) 会话")
+                Text(loc.t("island.sessions", totalCount))
                     .foregroundStyle(.white)
                 if activeCount > 0 {
-                    Text("· \(activeCount) 活跃")
+                    Text(loc.t("island.active", activeCount))
                         .foregroundStyle(.green)
                 }
             } else {
-                Text("空闲")
+                Text(loc.t("island.idle"))
                     .foregroundStyle(.secondary)
             }
             statusDot   // 状态点放末尾
@@ -218,7 +219,7 @@ struct IslandView: View {
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary.opacity(0.7))
                 } else {
-                    Text("无配额(apikey/无数据)").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(loc.t("quota.none")).font(.system(size: 10)).foregroundStyle(.secondary)
                 }
             }
 
@@ -235,11 +236,11 @@ struct IslandView: View {
                     .foregroundStyle(quota.claudeMode == .subscription ? .green : .secondary)
                 if quota.claudeTodayTokens > 0 {
                     // 本地累计的今日 token（仅参考，非官方配额）
-                    Text("今日 \(fmtTokens(quota.claudeTodayTokens))")
+                    Text(loc.t("quota.today", fmtTokens(quota.claudeTodayTokens)))
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary.opacity(0.85))
                 } else if quota.claudeMode == .subscription {
-                    Text("限额不可见 ↗")
+                    Text(loc.t("quota.hidden"))
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary.opacity(0.7))
                 }
@@ -250,29 +251,29 @@ struct IslandView: View {
                       let url = URL(string: "https://claude.ai/settings/usage") else { return }
                 NSWorkspace.shared.open(url)
             }
-            .help("订阅模式：点击打开 claude.ai 用量页看官方 5h/7d 配额（本地不可读）；今日 token 为本地累计，仅参考")
+            .help(loc.t("quota.help"))
 
             Spacer()
             Image(systemName: showActions ? "plus.circle.fill" : "plus.circle")
                 .font(.system(size: 13)).foregroundStyle(showActions ? .cyan : .white.opacity(0.7))
                 .contentShape(Rectangle())
                 .onTapGesture { withAnimation(.easeInOut(duration: 0.18)) { showActions.toggle() } }
-                .help("新建会话 / 项目组")
+                .help(loc.t("action.newHelp"))
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
                 .contentShape(Rectangle())
                 .onTapGesture { HistoryWindowController.shared.show() }
-                .help("历史对话")
+                .help(loc.t("action.historyHelp"))
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
                 .contentShape(Rectangle())
                 .onTapGesture { SettingsWindowController.shared.show() }
-                .help("设置")
+                .help(loc.t("action.settingsHelp"))
             Image(systemName: "power")
                 .font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
                 .contentShape(Rectangle())
                 .onTapGesture { NSApp.terminate(nil) }
-                .help("退出 DevIsland")
+                .help(loc.t("action.quitHelp"))
         }
         .padding(.bottom, 2)
     }
@@ -339,7 +340,7 @@ struct IslandView: View {
                 }
             }
             if store.sessions.isEmpty && managed.sessions.isEmpty && approvals.pending.isEmpty {
-                Text("没有正在运行的 AI 会话")
+                Text(loc.t("island.noSessions"))
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -736,6 +737,7 @@ struct SessionDetailView: View {
     let session: AgentSession
     let onBack: () -> Void
     @State private var messages: [TranscriptMessage] = []
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -761,7 +763,7 @@ struct SessionDetailView: View {
                 if session.status == .running {
                     PixelRunnerView(color: .green, pixelSize: 2)
                 }
-                Text(session.status.label)
+                Text(loc.t(session.status.labelKey))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(session.status == .running ? .green : .secondary)
             }

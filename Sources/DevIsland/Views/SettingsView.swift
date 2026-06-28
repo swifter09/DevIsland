@@ -8,12 +8,12 @@ struct SettingsView: View {
     enum Pane: String, CaseIterable, Identifiable {
         case general, approvals, permissions, about
         var id: String { rawValue }
-        var title: String {
+        var titleKey: String {
             switch self {
-            case .general: return "通用"
-            case .approvals: return "审批"
-            case .permissions: return "权限"
-            case .about: return "关于"
+            case .general: return "settings.pane.general"
+            case .approvals: return "settings.pane.approvals"
+            case .permissions: return "settings.pane.permissions"
+            case .about: return "settings.pane.about"
             }
         }
         var icon: String {
@@ -35,12 +35,13 @@ struct SettingsView: View {
     }
 
     @State private var pane: Pane = .general
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
         NavigationSplitView {
             List(Pane.allCases, selection: $pane) { p in
                 Label {
-                    Text(p.title).font(.system(size: 13))
+                    Text(loc.t(p.titleKey)).font(.system(size: 13))
                 } icon: {
                     Image(systemName: p.icon)
                         .font(.system(size: 11, weight: .semibold))
@@ -65,7 +66,7 @@ struct SettingsView: View {
                 .padding(24)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .navigationTitle(pane.title)
+            .navigationTitle(loc.t(pane.titleKey))
         }
         .frame(minWidth: 680, minHeight: 460)
     }
@@ -77,29 +78,41 @@ private struct GeneralPane: View {
     @AppStorage("islandAnimDuration") private var animDuration: Double = 0.28
     @AppStorage("launchTarget") private var launchTargetRaw = TerminalLauncher.Target.ghostty.rawValue
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
-        SettingsSection("系统") {
-            SettingRow(title: "开机自启动", subtitle: "登录时自动启动 DevIsland") {
+        SettingsSection(loc.t("settings.section.language")) {
+            SettingRow(title: loc.t("settings.section.language"), subtitle: loc.t("settings.language.sub")) {
+                Picker("", selection: $loc.language) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .labelsHidden().frame(width: 130)
+            }
+        }
+
+        SettingsSection(loc.t("settings.section.system")) {
+            SettingRow(title: loc.t("settings.launchAtLogin"), subtitle: loc.t("settings.launchAtLogin.sub")) {
                 Toggle("", isOn: $launchAtLogin)
                     .labelsHidden().toggleStyle(.switch)
                     .onChange(of: launchAtLogin) { _, on in setLaunch(on) }
             }
         }
 
-        SettingsSection("展开 / 动画") {
-            SettingRow(title: "动画速度", subtitle: "岛展开/收起的时长") {
+        SettingsSection(loc.t("settings.section.anim")) {
+            SettingRow(title: loc.t("settings.animSpeed"), subtitle: loc.t("settings.animSpeed.sub")) {
                 HStack(spacing: 8) {
                     Slider(value: $animDuration, in: 0.12...0.6).frame(width: 160)
-                    Text(animDuration <= 0.18 ? "快" : animDuration >= 0.45 ? "慢" : "适中")
+                    Text(loc.t(animDuration <= 0.18 ? "settings.anim.fast" : animDuration >= 0.45 ? "settings.anim.slow" : "settings.anim.medium"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                         .frame(width: 28, alignment: .trailing)
                 }
             }
         }
 
-        SettingsSection("新建会话") {
-            SettingRow(title: "默认终端", subtitle: "「开终端」用哪个终端启动会话") {
+        SettingsSection(loc.t("settings.section.newChat")) {
+            SettingRow(title: loc.t("settings.defaultTerminal"), subtitle: loc.t("settings.defaultTerminal.sub")) {
                 Picker("", selection: $launchTargetRaw) {
                     ForEach(TerminalLauncher.installedTargets()) { t in
                         Text(t.rawValue).tag(t.rawValue)
@@ -124,17 +137,18 @@ private struct GeneralPane: View {
 private struct ApprovalsPane: View {
     @ObservedObject private var approvals = ApprovalService.shared
     @AppStorage("approvalTimeout") private var approvalTimeout: Double = 60
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
-        SettingsSection("岛上批准") {
-            SettingRow(title: "在岛上显示权限确认",
-                       subtitle: "开启后，Claude/Codex 的权限请求会弹到岛上批准") {
+        SettingsSection(loc.t("settings.section.approval")) {
+            SettingRow(title: loc.t("settings.showApproval"),
+                       subtitle: loc.t("settings.showApproval.sub")) {
                 Toggle("", isOn: $approvals.gateEnabled)
                     .labelsHidden().toggleStyle(.switch)
             }
             Divider().padding(.leading, 14)
-            SettingRow(title: "审批超时",
-                       subtitle: "超过这个时长没点允许/拒绝就自动撤掉卡片") {
+            SettingRow(title: loc.t("settings.approvalTimeout"),
+                       subtitle: loc.t("settings.approvalTimeout.sub")) {
                 HStack(spacing: 8) {
                     Slider(value: $approvalTimeout, in: 30...600, step: 10).frame(width: 160)
                     Text("\(Int(approvalTimeout))s")
@@ -144,25 +158,26 @@ private struct ApprovalsPane: View {
             }
         }
 
-        SettingsSection("快捷键") {
-            SettingRow(title: "允许当前请求") { KeyCap("⌘Y") }
+        SettingsSection(loc.t("settings.section.hotkeys")) {
+            SettingRow(title: loc.t("settings.hotkey.allow")) { KeyCap("⌘Y") }
             Divider().padding(.leading, 14)
-            SettingRow(title: "拒绝当前请求") { KeyCap("⌘N") }
+            SettingRow(title: loc.t("settings.hotkey.deny")) { KeyCap("⌘N") }
         }
     }
 }
 
 private struct PermissionsPane: View {
     @State private var trusted = AccessibilityFocuser.isTrusted(promptIfNeeded: false)
+    @ObservedObject private var loc = L10n.shared
 
     var body: some View {
-        SettingsSection("辅助功能") {
-            SettingRow(title: "精确跳转到窗口",
-                       subtitle: trusted ? "已授权" : "未授权——点右侧开启后才能精确激活对应终端窗口") {
+        SettingsSection(loc.t("settings.section.a11y")) {
+            SettingRow(title: loc.t("settings.a11y.preciseJump"),
+                       subtitle: trusted ? loc.t("settings.a11y.authorized") : loc.t("settings.a11y.notAuthorized")) {
                 if trusted {
-                    Text("已开启").font(.system(size: 12)).foregroundStyle(.green)
+                    Text(loc.t("settings.a11y.on")).font(.system(size: 12)).foregroundStyle(.green)
                 } else {
-                    Button("开启") {
+                    Button(loc.t("settings.a11y.enable")) {
                         AccessibilityFocuser.isTrusted(promptIfNeeded: true)
                         NSWorkspace.shared.open(URL(string:
                             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
@@ -175,18 +190,19 @@ private struct PermissionsPane: View {
 }
 
 private struct AboutPane: View {
+    @ObservedObject private var loc = L10n.shared
     var body: some View {
-        SettingsSection("关于") {
-            SettingRow(title: "DevIsland", subtitle: "顶部动态岛 · AI 会话监控与批准") {
+        SettingsSection(loc.t("settings.section.about")) {
+            SettingRow(title: "DevIsland", subtitle: loc.t("settings.about.sub")) {
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—")
                     .font(.system(size: 12)).foregroundStyle(.secondary)
             }
         }
 
         // 退出兜底：岛上也有 ⏻ 按钮，这里再留一个，万一岛没渲染出来时仍能退出
-        SettingsSection("应用") {
-            SettingRow(title: "退出 DevIsland", subtitle: "完全关闭 App（含顶部悬浮岛与后台监控）") {
-                Button("退出") { NSApp.terminate(nil) }
+        SettingsSection(loc.t("settings.section.app")) {
+            SettingRow(title: loc.t("settings.quit"), subtitle: loc.t("settings.quit.sub")) {
+                Button(loc.t("settings.quit.button")) { NSApp.terminate(nil) }
                     .controlSize(.small)
             }
         }
@@ -269,7 +285,7 @@ final class SettingsWindowController {
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered, defer: false
         )
-        w.title = "DevIsland 设置"
+        w.title = L10n.shared.t("settings.windowTitle")
         w.titlebarAppearsTransparent = false
         w.isReleasedWhenClosed = false
         w.contentView = NSHostingView(rootView: SettingsView())
